@@ -12,7 +12,6 @@ from scripts.create_tables import (
 )
 from scripts.load_csv_postgres import load_csv_to_table
 
-
 with DAG(
     dag_id="sales_star_schema_pipeline",
     start_date=datetime(2025, 1, 1),
@@ -114,9 +113,7 @@ with DAG(
     create_dim_product_task >> load_dim_product_task
     create_dim_date_task >> load_dim_date_task
 
-    # Step 3 - Load fact table only after:
-    #   - fact table exists
-    #   - all dimensions have been loaded
+    # Step 3 - Load fact table
     [
         create_fact_sales_task,
         load_dim_customer_task,

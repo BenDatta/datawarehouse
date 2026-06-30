@@ -15,43 +15,54 @@ def get_connection():
     )
 
 
-def run_query(query, success_message):
+def run_query(query, message):
     conn = get_connection()
     try:
         with conn.cursor() as cur:
             cur.execute(query)
         conn.commit()
-        print(success_message)
+        print(message)
     finally:
         conn.close()
 
 
+# ─────────────────────────────
+# DIM CUSTOMER
+# ─────────────────────────────
 def create_dim_customer():
     query = """
     CREATE TABLE IF NOT EXISTS dim_customer (
         customer_id   INT PRIMARY KEY,
         customer_name TEXT,
-        email         TEXT,
+        email         TEXT UNIQUE,
         city          TEXT,
         country       TEXT,
-        signup_date   DATE
+        signup_date   DATE,
+        updated_at    TIMESTAMP DEFAULT NOW()
     );
     """
-    run_query(query, "dim_customer Table created")
+    run_query(query, "dim_customer ready")
 
 
+# ─────────────────────────────
+# DIM PRODUCT
+# ─────────────────────────────
 def create_dim_product():
     query = """
     CREATE TABLE IF NOT EXISTS dim_product (
         product_id   INT PRIMARY KEY,
         product_name TEXT,
         category     TEXT,
-        unit_price   NUMERIC
+        unit_price   NUMERIC,
+        updated_at   TIMESTAMP DEFAULT NOW()
     );
     """
-    run_query(query, "dim_product Table created")
+    run_query(query, "dim_product ready")
 
 
+# ─────────────────────────────
+# DIM DATE
+# ─────────────────────────────
 def create_dim_date():
     query = """
     CREATE TABLE IF NOT EXISTS dim_date (
@@ -66,26 +77,34 @@ def create_dim_date():
         is_weekend  BOOLEAN
     );
     """
-    run_query(query, "dim_date Table created")
+    run_query(query, "dim_date ready")
 
 
+# ─────────────────────────────
+# FACT SALES
+# ─────────────────────────────
 def create_fact_sales():
     query = """
     CREATE TABLE IF NOT EXISTS fact_sales (
-        sale_id      INT PRIMARY KEY,
+        sale_id      INT,
         customer_id  INT REFERENCES dim_customer(customer_id),
         product_id   INT REFERENCES dim_product(product_id),
         date_id      INT REFERENCES dim_date(date_id),
         quantity     INT,
         unit_price   NUMERIC,
-        total_amount NUMERIC
+        total_amount NUMERIC,
+
+        PRIMARY KEY (sale_id, customer_id, product_id, date_id)
     );
     """
-    run_query(query, "fact_sales Table created")
+    run_query(query, "fact_sales ready")
 
 
+# ─────────────────────────────
+# RUN ALL
+# ─────────────────────────────
 if __name__ == "__main__":
     create_dim_customer()
     create_dim_product()
     create_dim_date()
-    create_fact_sales()  # must be last — depends on the three dim tables above
+    create_fact_sales()

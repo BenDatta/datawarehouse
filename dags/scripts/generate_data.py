@@ -1,74 +1,66 @@
 import random
 from datetime import date, timedelta
 from pathlib import Path
-
 import pandas as pd
 from faker import Faker
 
-fake = Faker("en_US")
+fake = Faker()
 Faker.seed(42)
 random.seed(42)
 
 NUM_CUSTOMERS = 2000
 NUM_PRODUCTS = 200
-NUM_SALES = 100_000
+NUM_SALES = 150_000
 
-DATE_START = date(2025, 1, 1)
-DATE_END = date(2025, 12, 31)
+START_DATE = date(2025, 1, 1)
+END_DATE = date(2025, 12, 31)
 
-PRODUCT_CATEGORIES = [
-    "Electronics",
-    "Clothing",
-    "Home & Garden",
-    "Sports",
-    "Books",
-    "Toys",
-]
-
-# Directory where Airflow expects the CSV files
 DATA_DIR = Path("/opt/airflow/data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# ── 1. Dim Customer ──────────────────────────────────────────────────────
-def generate_dim_customer(n):
-    rows = []
-    for i in range(1, n + 1):
-        rows.append(
+# ─────────────────────────────
+# DIM CUSTOMER
+# ─────────────────────────────
+def dim_customer(n):
+    return pd.DataFrame(
+        [
             {
                 "customer_id": i,
                 "customer_name": fake.name(),
-                "email": fake.email(),
+                "email": f"user{i}@example.com",
                 "city": fake.city(),
                 "country": fake.country(),
-                "signup_date": fake.date_between(
-                    start_date=DATE_START,
-                    end_date=DATE_END,
-                ),
+                "signup_date": fake.date_between(START_DATE, END_DATE),
             }
-        )
-    return pd.DataFrame(rows)
+            for i in range(1, n + 1)
+        ]
+    )
 
 
-# ── 2. Dim Product ────────────────────────────────────────────────────────
-def generate_dim_product(n):
-    rows = []
-    for i in range(1, n + 1):
-        rows.append(
+# ─────────────────────────────
+# DIM PRODUCT
+# ─────────────────────────────
+def dim_product(n):
+    categories = ["Electronics", "Clothing", "Home", "Sports", "Books", "Toys"]
+
+    return pd.DataFrame(
+        [
             {
                 "product_id": i,
-                "product_name": fake.word().capitalize()
-                + " "
-                + fake.word().capitalize(),
-                "category": random.choice(PRODUCT_CATEGORIES),
+                "product_name": fake.word().capitalize(),
+                "category": random.choice(categories),
                 "unit_price": round(random.uniform(5, 500), 2),
             }
-        )
-    return pd.DataFrame(rows)
+            for i in range(1, n + 1)
+        ]
+    )
 
 
-# ── 3. Dim Date ───────────────────────────────────────────────────────────
-def generate_dim_date(start, end):
+# ─────────────────────────────
+# DIM DATE
+# ─────────────────────────────
+def dim_date(start, end):
     rows = []
     current = start
 
@@ -91,25 +83,22 @@ def generate_dim_date(start, end):
     return pd.DataFrame(rows)
 
 
-# ── 4. Fact Sales ─────────────────────────────────────────────────────────
-def generate_fact_sales(n, dim_customer, dim_product, dim_date):
-    customer_ids = dim_customer["customer_id"].tolist()
-    product_ids = dim_product["product_id"].tolist()
-    date_ids = dim_date["date_id"].tolist()
+# ─────────────────────────────
+# FACT SALES
+# ─────────────────────────────
+def fact_sales(n, customers, products, dates):
+    customer_ids = customers["customer_id"].tolist()
+    product_ids = products["product_id"].tolist()
+    date_ids = dates["date_id"].tolist()
 
-    price_lookup = dict(
-        zip(
-            dim_product["product_id"],
-            dim_product["unit_price"],
-        )
-    )
+    price_map = dict(zip(products["product_id"], products["unit_price"]))
 
     rows = []
 
     for i in range(1, n + 1):
         product_id = random.choice(product_ids)
         quantity = random.randint(1, 10)
-        unit_price = price_lookup[product_id]
+        unit_price = price_map[product_id]
 
         rows.append(
             {
@@ -126,32 +115,26 @@ def generate_fact_sales(n, dim_customer, dim_product, dim_date):
     return pd.DataFrame(rows)
 
 
-# ── Generate all CSVs ─────────────────────────────────────────────────────
+# ─────────────────────────────
+# RUN
+# ─────────────────────────────
 def main():
+    print("Generating data...")
 
-    print("Generating dimension tables...")
+    customers = dim_customer(NUM_CUSTOMERS)
+    products = dim_product(NUM_PRODUCTS)
+    dates = dim_date(START_DATE, END_DATE)
 
-    dim_customer = generate_dim_customer(NUM_CUSTOMERS)
-    dim_product = generate_dim_product(NUM_PRODUCTS)
-    dim_date = generate_dim_date(DATE_START, DATE_END)
+    sales = fact_sales(NUM_SALES, customers, products, dates)
 
-    print("Generating fact table...")
+    print("Saving CSVs...")
 
-    fact_sales = generate_fact_sales(
-        NUM_SALES,
-        dim_customer,
-        dim_product,
-        dim_date,
-    )
+    customers.to_csv(DATA_DIR / "dim_customer.csv", index=False)
+    products.to_csv(DATA_DIR / "dim_product.csv", index=False)
+    dates.to_csv(DATA_DIR / "dim_date.csv", index=False)
+    sales.to_csv(DATA_DIR / "fact_sales.csv", index=False)
 
-    print("Saving CSV files...")
-
-    dim_customer.to_csv(DATA_DIR / "dim_customer.csv", index=False)
-    dim_product.to_csv(DATA_DIR / "dim_product.csv", index=False)
-    dim_date.to_csv(DATA_DIR / "dim_date.csv", index=False)
-    fact_sales.to_csv(DATA_DIR / "fact_sales.csv", index=False)
-
-    print("\n✅ CSV files created successfully!\n")
+    print("✅ Done")
 
 
 if __name__ == "__main__":
