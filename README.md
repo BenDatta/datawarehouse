@@ -1,6 +1,16 @@
 # Sales Data Warehouse
 
 A demo Sales ETL pipeline that loads synthetic sales data into a PostgreSQL star schema, orchestrated with Apache Airflow. Data covers the full 2025 calendar year and is generated with a fixed seed for reproducible runs.
+Stack
+
+<p align="left">
+  <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/Apache%20Airflow-017CEE?style=for-the-badge&logo=apacheairflow&logoColor=white" />
+  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
+  <img src="https://img.shields.io/badge/pandas-150458?style=for-the-badge&logo=pandas&logoColor=white" />
+  <img src="https://img.shields.io/badge/Faker-00BFA5?style=for-the-badge&logo=python&logoColor=white" />
+</p>
 
 ## Star Schema
 
